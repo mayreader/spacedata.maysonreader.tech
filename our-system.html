@@ -1,0 +1,289 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Solar System Simulation</title>
+    <style>
+        body {
+            margin: 0;
+            overflow: hidden;
+            background: #000;
+            font-family: Arial, sans-serif;
+            display: flex;
+        }
+        canvas {
+            display: block;
+            flex: 1;
+        }
+        #sidebar {
+            width: 250px;
+            background: rgba(0, 0, 0, 0.8);
+            color: #fff;
+            padding: 10px;
+            box-sizing: border-box;
+            height: 100vh;
+            overflow-y: auto;
+        }
+        #sidebar h2 {
+            margin-top: 0;
+        }
+        #planetList {
+            list-style-type: none;
+            padding: 0;
+            margin: 0;
+        }
+        #planetList li {
+            margin-bottom: 10px;
+            cursor: pointer;
+            padding: 5px;
+            border-radius: 5px;
+        }
+        #planetList li:hover {
+            background: rgba(255, 255, 255, 0.1);
+        }
+        #planetInfo {
+            margin-top: 20px;
+        }
+        #planetImage {
+            max-width: 100%;
+            height: auto;
+        }
+        #settings {
+            position: fixed;
+            top: 10px;
+            right: 10px;
+            background: rgba(0, 0, 0, 0.8);
+            color: #fff;
+            padding: 10px;
+            border-radius: 5px;
+        }
+        #settings label {
+            display: block;
+            margin-bottom: 5px;
+        }
+        #settings input {
+            margin-right: 5px;
+        }
+    </style>
+</head>
+<body>
+    <div id="sidebar">
+        <h2>Planets</h2>
+        <ul id="planetList"></ul>
+        <div id="planetInfo">
+            <img id="planetImage" src="" alt="Planet Image">
+            <div id="planetDetails"></div>
+        </div>
+        <div id="settings">
+            <label>
+                <input type="checkbox" id="toggleDwarfPlanets">
+                Show Dwarf Planets
+            </label>
+        </div>
+    </div>
+    <canvas id="solarSystemCanvas"></canvas>
+
+    <script>
+        const canvas = document.getElementById('solarSystemCanvas');
+        const ctx = canvas.getContext('2d');
+        const sidebar = document.getElementById('sidebar');
+        const planetList = document.getElementById('planetList');
+        const planetImage = document.getElementById('planetImage');
+        const planetDetails = document.getElementById('planetDetails');
+
+        // Constants for scaling
+        const SUN_RADIUS = 20;
+        const MIN_PLANet_DISTANCE = 50; // Adjusted to prevent overlap
+        const SCALE_RADIUS = 0.1;
+        const SCALE_DISTANCE = 0.1;
+
+        // Orbital periods in Earth days
+        const ORBITAL_PERIODS = {
+            'Mercury': 87.97,
+            'Venus': 224.70,
+            'Earth': 365.26,
+            'Mars': 686.98,
+            'Jupiter': 4332.82,
+            'Saturn': 10755.70,
+            'Uranus': 30687.15,
+            'Neptune': 60190.03,
+            'Pluto': 90560,
+            'Ceres': 1680,
+            'Haumea': 10300,
+            'Makemake': 11100,
+            'Eris': 12200
+        };
+
+        // Planet data
+        const planets = [
+            { name: 'Mercury', angle: 0, radius: 2 * SCALE_RADIUS, distance: MIN_PLANet_DISTANCE + 58 * SCALE_DISTANCE, diameter: 4880, orbitalPeriod: ORBITAL_PERIODS['Mercury'], color: '#b0b0b0', image: 'https://solarsystem.nasa.gov/system/news_items/main_images/1681_mercury.jpg', moons: [], trail: [] },
+            { name: 'Venus', angle: 0, radius: 4 * SCALE_RADIUS, distance: MIN_PLANet_DISTANCE + 108 * SCALE_DISTANCE, diameter: 12104, orbitalPeriod: ORBITAL_PERIODS['Venus'], color: '#e5c07b', image: 'https://solarsystem.nasa.gov/system/news_items/main_images/1682_venus.jpg', moons: [], trail: [] },
+            { name: 'Earth', angle: 0, radius: 4.5 * SCALE_RADIUS, distance: MIN_PLANet_DISTANCE + 149 * SCALE_DISTANCE, diameter: 12756, orbitalPeriod: ORBITAL_PERIODS['Earth'], color: '#61afef', image: 'https://solarsystem.nasa.gov/system/news_items/main_images/1683_earth.jpg', moons: [{ name: 'Moon', angle: 0, radius: 1 * SCALE_RADIUS, distance: 10 * SCALE_DISTANCE, speed: 0.05 }], trail: [] },
+            { name: 'Mars', angle: 0, radius: 3 * SCALE_RADIUS, distance: MIN_PLANet_DISTANCE + 227 * SCALE_DISTANCE, diameter: 6792, orbitalPeriod: ORBITAL_PERIODS['Mars'], color: '#e06c75', image: 'https://solarsystem.nasa.gov/system/news_items/main_images/1684_mars.jpg', moons: [{ name: 'Phobos', angle: 0, radius: 0.5 * SCALE_RADIUS, distance: 5 * SCALE_DISTANCE, speed: 0.07 }, { name: 'Deimos', angle: 0, radius: 0.5 * SCALE_RADIUS, distance: 8 * SCALE_DISTANCE, speed: 0.06 }], trail: [] },
+            { name: 'Jupiter', angle: 0, radius: 10 * SCALE_RADIUS, distance: MIN_PLANet_DISTANCE + 778 * SCALE_DISTANCE, diameter: 142984, orbitalPeriod: ORBITAL_PERIODS['Jupiter'], color: '#d19a66', image: 'https://solarsystem.nasa.gov/system/news_items/main_images/1685_jupiter.jpg', moons: [{ name: 'Io', angle: 0, radius: 1 * SCALE_RADIUS, distance: 15 * SCALE_DISTANCE, speed: 0.04 }, { name: 'Europa', angle: 0, radius: 1 * SCALE_RADIUS, distance: 20 * SCALE_DISTANCE, speed: 0.03 }, { name: 'Ganymede', angle: 0, radius: 1.5 * SCALE_RADIUS, distance: 25 * SCALE_DISTANCE, speed: 0.02 }, { name: 'Callisto', angle: 0, radius: 1.5 * SCALE_RADIUS, distance: 30 * SCALE_DISTANCE, speed: 0.01 }], trail: [] },
+            { name: 'Saturn', angle: 0, radius: 8 * SCALE_RADIUS, distance: MIN_PLANet_DISTANCE + 1400 * SCALE_DISTANCE, diameter: 120536, orbitalPeriod: ORBITAL_PERIODS['Saturn'], color: '#e5c07b', image: 'https://solarsystem.nasa.gov/system/news_items/main_images/1686_saturn.jpg', rings: { innerRadius: 9 * SCALE_RADIUS, outerRadius: 12 * SCALE_RADIUS }, moons: [{ name: 'Titan', angle: 0, radius: 1.5 * SCALE_RADIUS, distance: 18 * SCALE_DISTANCE, speed: 0.03 }, { name: 'Rhea', angle: 0, radius: 1 * SCALE_RADIUS, distance: 22 * SCALE_DISTANCE, speed: 0.025 }, { name: 'Iapetus', angle: 0, radius: 1 * SCALE_RADIUS, distance: 26 * SCALE_DISTANCE, speed: 0.02 }], trail: [] },
+            { name: 'Uranus', angle: 0, radius: 6 * SCALE_RADIUS, distance: MIN_PLANet_DISTANCE + 2900 * SCALE_DISTANCE, diameter: 51118, orbitalPeriod: ORBITAL_PERIODS['Uranus'], color: '#56b6c2', image: 'https://solarsystem.nasa.gov/system/news_items/main_images/1687_uranus.jpg', rings: { innerRadius: 7 * SCALE_RADIUS, outerRadius: 9 * SCALE_RADIUS }, moons: [{ name: 'Miranda', angle: 0, radius: 0.5 * SCALE_RADIUS, distance: 7 * SCALE_DISTANCE, speed: 0.03 }, { name: 'Ariel', angle: 0, radius: 0.5 * SCALE_RADIUS, distance: 10 * SCALE_DISTANCE, speed: 0.025 }], trail: [] },
+            { name: 'Neptune', angle: 0, radius: 6 * SCALE_RADIUS, distance: MIN_PLANet_DISTANCE + 4500 * SCALE_DISTANCE, diameter: 49528, orbitalPeriod: ORBITAL_PERIODS['Neptune'], color: '#61afef', image: 'https://solarsystem.nasa.gov/system/news_items/main_images/1688_neptune.jpg', moons: [{ name: 'Triton', angle: 0, radius: 1 * SCALE_RADIUS, distance: 14 * SCALE_DISTANCE, speed: 0.03 }, { name: 'Nereid', angle: 0, radius: 0.5 * SCALE_RADIUS, distance: 18 * SCALE_DISTANCE, speed: 0.025 }], trail: [] },
+            { name: 'Pluto', angle: 0, radius: 2 * SCALE_RADIUS, distance: MIN_PLANet_DISTANCE + 5900 * SCALE_DISTANCE, diameter: 2337, orbitalPeriod: ORBITAL_PERIODS['Pluto'], color: '#d19a66', image: 'https://solarsystem.nasa.gov/system/news_items/main_images/1689_pluto.jpg', moons: [{ name: 'Charon', angle: 0, radius: 1 * SCALE_RADIUS, distance: 8 * SCALE_DISTANCE, speed: 0.04 }, { name: 'Nix', angle: 0, radius: 0.5 * SCALE_RADIUS, distance: 12 * SCALE_DISTANCE, speed: 0.035 }, { name: 'Hydra', angle: 0, radius: 0.5 * SCALE_RADIUS, distance: 16 * SCALE_DISTANCE, speed: 0.03 }], trail: [] },
+            { name: 'Ceres', angle: 0, radius: 3 * SCALE_RADIUS, distance: MIN_PLANet_DISTANCE + 413 * SCALE_DISTANCE, diameter: 964, orbitalPeriod: ORBITAL_PERIODS['Ceres'], color: '#d0b97e', image: 'https://solarsystem.nasa.gov/system/news_items/main_images/1690_ceres.jpg', moons: [], trail: [] },
+            { name: 'Haumea', angle: 0, radius: 2 * SCALE_RADIUS, distance: MIN_PLANet_DISTANCE + 6000 * SCALE_DISTANCE, diameter: 1632, orbitalPeriod: ORBITAL_PERIODS['Haumea'], color: '#e5c07b', image: 'https://solarsystem.nasa.gov/system/news_items/main_images/1691_haumea.jpg', moons: [], trail: [] },
+            { name: 'Makemake', angle: 0, radius: 2 * SCALE_RADIUS, distance: MIN_PLANet_DISTANCE + 6500 * SCALE_DISTANCE, diameter: 1430, orbitalPeriod: ORBITAL_PERIODS['Makemake'], color: '#b0b0b0', image: 'https://solarsystem.nasa.gov/system/news_items/main_images/1692_makemake.jpg', moons: [], trail: [] },
+            { name: 'Eris', angle: 0, radius: 3 * SCALE_RADIUS, distance: MIN_PLANet_DISTANCE + 9600 * SCALE_DISTANCE, diameter: 2326, orbitalPeriod: ORBITAL_PERIODS['Eris'], color: '#e06c75', image: 'https://solarsystem.nasa.gov/system/news_items/main_images/1693_eris.jpg', moons: [], trail: [] }
+        ];
+
+        let showDwarfPlanets = false;
+
+        function resizeCanvas() {
+            canvas.width = window.innerWidth - sidebar.offsetWidth;
+            canvas.height = window.innerHeight;
+        }
+
+        function calculateScalingFactor() {
+            const maxDistance = Math.max(...planets.map(planet => planet.distance));
+            const scalingFactor = (canvas.width - 2 * SUN_RADIUS) / (2 * maxDistance);
+            return scalingFactor;
+        }
+
+        function drawSun() {
+            ctx.beginPath();
+            ctx.arc(canvas.width / 2, canvas.height / 2, SUN_RADIUS, 0, Math.PI * 2);
+            ctx.fillStyle = '#ffcc00';
+            ctx.fill();
+            ctx.closePath();
+        }
+
+        function drawOrbits(scalingFactor) {
+            planets.forEach(planet => {
+                if (planet.name !== 'Ceres' && planet.name !== 'Haumea' && planet.name !== 'Makemake' && planet.name !== 'Eris' || showDwarfPlanets) {
+                    ctx.beginPath();
+                    ctx.arc(canvas.width / 2, canvas.height / 2, planet.distance * scalingFactor, 0, Math.PI * 2);
+                    ctx.strokeStyle = '#555';
+                    ctx.stroke();
+                    ctx.closePath();
+                }
+            });
+        }
+
+        function drawPlanets() {
+            const scalingFactor = calculateScalingFactor();
+            ctx.clearRect(0, 0, canvas.width, canvas.height);
+            drawSun();
+            drawOrbits(scalingFactor);
+
+            planets.forEach(planet => {
+                if (planet.name !== 'Ceres' && planet.name !== 'Haumea' && planet.name !== 'Makemake' && planet.name !== 'Eris' || showDwarfPlanets) {
+                    const x = canvas.width / 2 + planet.distance * scalingFactor * Math.cos(planet.angle);
+                    const y = canvas.height / 2 + planet.distance * scalingFactor * Math.sin(planet.angle);
+
+                    // Draw planet trail
+                    planet.trail.push({ x, y });
+                    if (planet.trail.length > 50) planet.trail.shift();
+                    ctx.beginPath();
+                    ctx.moveTo(planet.trail[0].x, planet.trail[0].y);
+                    for (let i = 1; i < planet.trail.length; i++) {
+                        ctx.lineTo(planet.trail[i].x, planet.trail[i].y);
+                    }
+                    ctx.strokeStyle = planet.color;
+                    ctx.stroke();
+                    ctx.closePath();
+
+                    // Draw planet
+                    ctx.beginPath();
+                    ctx.arc(x, y, planet.radius * scalingFactor, 0, Math.PI * 2);
+                    ctx.fillStyle = planet.color;
+                    ctx.fill();
+                    ctx.closePath();
+
+                    // Draw planet name
+                    ctx.fillStyle = '#fff';
+                    ctx.font = '12px Arial';
+                    ctx.fillText(planet.name, x - planet.radius * scalingFactor, y + planet.radius * scalingFactor + 12);
+
+                    // Draw rings if the planet has them
+                    if (planet.rings) {
+                        ctx.beginPath();
+                        ctx.ellipse(x, y, planet.rings.outerRadius * scalingFactor, planet.rings.outerRadius * scalingFactor / 2, 0, 0, Math.PI * 2);
+                        ctx.strokeStyle = '#aaa';
+                        ctx.stroke();
+                        ctx.closePath();
+
+                        ctx.beginPath();
+                        ctx.ellipse(x, y, planet.rings.innerRadius * scalingFactor, planet.rings.innerRadius * scalingFactor / 2, 0, 0, Math.PI * 2);
+                        ctx.strokeStyle = '#aaa';
+                        ctx.stroke();
+                        ctx.closePath();
+                    }
+
+                    // Draw moons and their orbits
+                    planet.moons.forEach(moon => {
+                        // Draw moon orbit
+                        ctx.beginPath();
+                        ctx.arc(x, y, moon.distance * scalingFactor, 0, Math.PI * 2);
+                        ctx.strokeStyle = '#777';
+                        ctx.stroke();
+                        ctx.closePath();
+
+                        // Draw moon
+                        const moonX = x + moon.distance * scalingFactor * Math.cos(moon.angle);
+                        const moonY = y + moon.distance * scalingFactor * Math.sin(moon.angle);
+                        ctx.beginPath();
+                        ctx.arc(moonX, moonY, moon.radius * scalingFactor, 0, Math.PI * 2);
+                        ctx.fillStyle = '#aaa';
+                        ctx.fill();
+                        ctx.closePath();
+
+                        // Draw moon name
+                        ctx.fillStyle = '#aaa';
+                        ctx.font = '10px Arial';
+                        ctx.fillText(moon.name, moonX - moon.radius * scalingFactor, moonY + moon.radius * scalingFactor + 10);
+
+                        // Update moon angle
+                        moon.angle += moon.speed;
+                    });
+
+                    // Update planet angle
+                    planet.angle += (2 * Math.PI) / (planet.orbitalPeriod * 24 * 60 * 60 / 1000); // Speed in radians per frame
+                }
+            });
+        }
+
+        function animate() {
+            drawPlanets();
+            requestAnimationFrame(animate);
+        }
+
+        function updatePlanetList() {
+            planetList.innerHTML = '';
+            planets.forEach(planet => {
+                if (planet.name !== 'Ceres' && planet.name !== 'Haumea' && planet.name !== 'Makemake' && planet.name !== 'Eris' || showDwarfPlanets) {
+                    const li = document.createElement('li');
+                    li.textContent = planet.name;
+                    li.addEventListener('click', () => {
+                        planetImage.src = planet.image;
+                        planetDetails.innerHTML = `
+                            <h3>${planet.name}</h3>
+                            <p>Distance from the Sun: ${(planet.distance / SCALE_DISTANCE - MIN_PLANet_DISTANCE).toFixed(2)} units</p>
+                            <p>Diameter: ${planet.diameter} km</p>
+                        `;
+                    });
+                    planetList.appendChild(li);
+                }
+            });
+        }
+
+        // Handle window resize
+        window.addEventListener('resize', resizeCanvas);
+        resizeCanvas();
+
+        // Handle settings change
+        document.getElementById('toggleDwarfPlanets').addEventListener('change', function() {
+            showDwarfPlanets = this.checked;
+            updatePlanetList();
+        });
+
+        updatePlanetList();
+        animate();
+    </script>
+</body>
+</html>

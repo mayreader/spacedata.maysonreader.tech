@@ -1,0 +1,210 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Kepler-11 System Simulation</title>
+    <style>
+        body {
+            margin: 0;
+            overflow: hidden;
+            background: #000;
+            font-family: Arial, sans-serif;
+            display: flex;
+        }
+        canvas {
+            display: block;
+            flex: 1;
+        }
+        #sidebar {
+            width: 250px;
+            background: rgba(0, 0, 0, 0.8);
+            color: #fff;
+            padding: 10px;
+            box-sizing: border-box;
+            height: 100vh;
+            overflow-y: auto;
+        }
+        #sidebar h2 {
+            margin-top: 0;
+        }
+        #planetList {
+            list-style-type: none;
+            padding: 0;
+            margin: 0;
+        }
+        #planetList li {
+            margin-bottom: 10px;
+            cursor: pointer;
+            padding: 5px;
+            border-radius: 5px;
+        }
+        #planetList li:hover {
+            background: rgba(255, 255, 255, 0.1);
+        }
+        #planetInfo {
+            margin-top: 20px;
+        }
+        #planetImage {
+            max-width: 100%;
+            height: auto;
+        }
+        #settings {
+            position: fixed;
+            top: 10px;
+            right: 10px;
+            background: rgba(0, 0, 0, 0.8);
+            color: #fff;
+            padding: 10px;
+            border-radius: 5px;
+        }
+        #settings label {
+            display: block;
+            margin-bottom: 5px;
+        }
+        #settings input {
+            margin-right: 5px;
+        }
+    </style>
+</head>
+<body>
+    <div id="sidebar">
+        <h2>Kepler-11 System</h2>
+        <ul id="planetList"></ul>
+        <div id="planetInfo">
+            <img id="planetImage" src="" alt="Planet Image">
+            <div id="planetDetails"></div>
+        </div>
+        <div id="settings">
+            <label>
+                <input type="checkbox" id="toggleDwarfPlanets">
+                Show Dwarf Planets
+            </label>
+        </div>
+    </div>
+    <canvas id="solarSystemCanvas"></canvas>
+
+    <script>
+        const canvas = document.getElementById('solarSystemCanvas');
+        const ctx = canvas.getContext('2d');
+        const sidebar = document.getElementById('sidebar');
+        const planetList = document.getElementById('planetList');
+        const planetImage = document.getElementById('planetImage');
+        const planetDetails = document.getElementById('planetDetails');
+
+        // Kepler-11 System Data
+        const planets = [
+            { name: 'Kepler-11b', angle: 0, radius: 0.6, distance: 10, diameter: 1.9, speed: 0.017, color: '#ff9999', image: 'https://via.placeholder.com/150?text=Kepler-11b', moons: [], trail: [] },
+            { name: 'Kepler-11c', angle: 0, radius: 0.8, distance: 14, diameter: 2.5, speed: 0.013, color: '#ffcc99', image: 'https://via.placeholder.com/150?text=Kepler-11c', moons: [], trail: [] },
+            { name: 'Kepler-11d', angle: 0, radius: 0.9, distance: 19, diameter: 2.8, speed: 0.011, color: '#99cc99', image: 'https://via.placeholder.com/150?text=Kepler-11d', moons: [], trail: [] },
+            { name: 'Kepler-11e', angle: 0, radius: 1.0, distance: 26, diameter: 3.0, speed: 0.009, color: '#66ccff', image: 'https://via.placeholder.com/150?text=Kepler-11e', moons: [], trail: [] },
+            { name: 'Kepler-11f', angle: 0, radius: 0.8, distance: 35, diameter: 2.6, speed: 0.007, color: '#ff66cc', image: 'https://via.placeholder.com/150?text=Kepler-11f', moons: [], trail: [] },
+            { name: 'Kepler-11g', angle: 0, radius: 0.7, distance: 45, diameter: 2.4, speed: 0.006, color: '#cc99ff', image: 'https://via.placeholder.com/150?text=Kepler-11g', moons: [], trail: [] }
+        ];
+
+        let showDwarfPlanets = false;
+
+        function resizeCanvas() {
+            canvas.width = window.innerWidth - sidebar.offsetWidth;
+            canvas.height = window.innerHeight;
+        }
+
+        function calculateScalingFactor() {
+            const maxDistance = Math.max(...planets.map(planet => planet.distance));
+            return Math.min(canvas.width, canvas.height) / (maxDistance * 2.5);
+        }
+
+        function drawSun() {
+            ctx.beginPath();
+            ctx.arc(canvas.width / 2, canvas.height / 2, 20, 0, Math.PI * 2); // Adjust size of the Sun
+            ctx.fillStyle = '#ffcc00';
+            ctx.fill();
+            ctx.closePath();
+        }
+
+        function drawOrbits(scalingFactor) {
+            planets.forEach(planet => {
+                ctx.beginPath();
+                ctx.arc(canvas.width / 2, canvas.height / 2, planet.distance * scalingFactor, 0, Math.PI * 2);
+                ctx.strokeStyle = '#555';
+                ctx.stroke();
+                ctx.closePath();
+            });
+        }
+
+        function drawPlanets() {
+            const scalingFactor = calculateScalingFactor();
+            ctx.clearRect(0, 0, canvas.width, canvas.height);
+            drawSun();
+            drawOrbits(scalingFactor);
+
+            planets.forEach(planet => {
+                const x = canvas.width / 2 + planet.distance * scalingFactor * Math.cos(planet.angle);
+                const y = canvas.height / 2 + planet.distance * scalingFactor * Math.sin(planet.angle);
+
+                // Draw planet trail
+                planet.trail.push({ x, y });
+                if (planet.trail.length > 50) planet.trail.shift();
+                ctx.beginPath();
+                ctx.moveTo(planet.trail[0].x, planet.trail[0].y);
+                for (let i = 1; i < planet.trail.length; i++) {
+                    ctx.lineTo(planet.trail[i].x, planet.trail[i].y);
+                }
+                ctx.strokeStyle = planet.color;
+                ctx.stroke();
+                ctx.closePath();
+
+                // Draw planet
+                ctx.beginPath();
+                ctx.arc(x, y, planet.radius * scalingFactor, 0, Math.PI * 2);
+                ctx.fillStyle = planet.color;
+                ctx.fill();
+                ctx.closePath();
+
+                // Draw planet name
+                ctx.fillStyle = '#fff';
+                ctx.font = '12px Arial';
+                ctx.fillText(planet.name, x - planet.radius * scalingFactor, y + planet.radius * scalingFactor + 12);
+
+                // Update planet angle
+                planet.angle += (2 * Math.PI) / (planet.distance * 10); // Adjust speed for demonstration
+            });
+        }
+
+        function animate() {
+            drawPlanets();
+            requestAnimationFrame(animate);
+        }
+
+        function updatePlanetList() {
+            planetList.innerHTML = '';
+            planets.forEach(planet => {
+                const li = document.createElement('li');
+                li.textContent = planet.name;
+                li.addEventListener('click', () => {
+                    planetImage.src = planet.image;
+                    planetDetails.innerHTML = `
+                        <h3>${planet.name}</h3>
+                        <p>Distance from the Star: ${planet.distance} units</p>
+                        <p>Diameter: ${planet.diameter} times Earth diameter</p>
+                    `;
+                });
+                planetList.appendChild(li);
+            });
+        }
+
+        // Handle window resize
+        window.addEventListener('resize', resizeCanvas);
+        resizeCanvas();
+
+        // Handle settings change
+        document.getElementById('toggleDwarfPlanets').addEventListener('change', function() {
+            showDwarfPlanets = this.checked;
+            updatePlanetList();
+        });
+
+        updatePlanetList();
+        animate();
+    </script>
+</body>
+</html>

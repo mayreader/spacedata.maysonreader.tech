@@ -1,0 +1,221 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>TRAPPIST-1 System Simulation</title>
+    <style>
+        body {
+            margin: 0;
+            overflow: hidden;
+            background: #000;
+            font-family: Arial, sans-serif;
+            display: flex;
+        }
+        canvas {
+            display: block;
+            flex: 1;
+        }
+        #sidebar {
+            width: 250px;
+            background: rgba(0, 0, 0, 0.8);
+            color: #fff;
+            padding: 10px;
+            box-sizing: border-box;
+            height: 100vh;
+            overflow-y: auto;
+        }
+        #sidebar h2 {
+            margin-top: 0;
+        }
+        #planetList {
+            list-style-type: none;
+            padding: 0;
+            margin: 0;
+        }
+        #planetList li {
+            margin-bottom: 10px;
+            cursor: pointer;
+            padding: 5px;
+            border-radius: 5px;
+        }
+        #planetList li:hover {
+            background: rgba(255, 255, 255, 0.1);
+        }
+        #planetInfo {
+            margin-top: 20px;
+        }
+        #planetImage {
+            max-width: 100%;
+            height: auto;
+        }
+        #settings {
+            position: fixed;
+            top: 10px;
+            right: 10px;
+            background: rgba(0, 0, 0, 0.8);
+            color: #fff;
+            padding: 10px;
+            border-radius: 5px;
+        }
+        #settings label {
+            display: block;
+            margin-bottom: 5px;
+        }
+        #settings input {
+            margin-right: 5px;
+        }
+    </style>
+</head>
+<body>
+    <div id="sidebar">
+        <h2>TRAPPIST-1 System</h2>
+        <ul id="planetList"></ul>
+        <div id="planetInfo">
+            <img id="planetImage" src="" alt="Planet Image">
+            <div id="planetDetails"></div>
+        </div>
+    </div>
+    <canvas id="solarSystemCanvas"></canvas>
+
+    <script>
+        const canvas = document.getElementById('solarSystemCanvas');
+        const ctx = canvas.getContext('2d');
+        const sidebar = document.getElementById('sidebar');
+        const planetList = document.getElementById('planetList');
+        const planetImage = document.getElementById('planetImage');
+        const planetDetails = document.getElementById('planetDetails');
+
+        // TRAPPIST-1 System Data
+        const planets = [
+    {
+        name: 'TRAPPIST-1b', angle: 0, radius: 0.5, distance: 5, diameter: 1.1, speed: (2 * Math.PI / 1.51) / 10,
+        color: '#ff9999', image: 'https://via.placeholder.com/150?text=TRAPPIST-1b',
+        trail: []
+    },
+    {
+        name: 'TRAPPIST-1c', angle: 0, radius: 0.6, distance: 7, diameter: 1.2, speed: (2 * Math.PI / 2.42) / 10,
+        color: '#ffcc99', image: 'https://via.placeholder.com/150?text=TRAPPIST-1c',
+        trail: []
+    },
+    {
+        name: 'TRAPPIST-1d', angle: 0, radius: 0.7, distance: 10, diameter: 1.3, speed: (2 * Math.PI / 4.05) / 10,
+        color: '#99cc99', image: 'https://via.placeholder.com/150?text=TRAPPIST-1d',
+        trail: []
+    },
+    {
+        name: 'TRAPPIST-1e', angle: 0, radius: 0.8, distance: 13, diameter: 1.4, speed: (2 * Math.PI / 6.10) / 10,
+        color: '#66ccff', image: 'https://via.placeholder.com/150?text=TRAPPIST-1e',
+        trail: []
+    },
+    {
+        name: 'TRAPPIST-1f', angle: 0, radius: 0.7, distance: 20, diameter: 1.3, speed: (2 * Math.PI / 9.20) / 10,
+        color: '#ff66cc', image: 'https://via.placeholder.com/150?text=TRAPPIST-1f',
+        trail: []
+    },
+    {
+        name: 'TRAPPIST-1g', angle: 0, radius: 0.6, distance: 30, diameter: 1.2, speed: (2 * Math.PI / 12.35) / 10,
+        color: '#cc99ff', image: 'https://via.placeholder.com/150?text=TRAPPIST-1g',
+        trail: []
+    },
+    {
+        name: 'TRAPPIST-1h', angle: 0, radius: 0.5, distance: 39, diameter: 1.1, speed: (2 * Math.PI / 20.00) / 10,
+        color: '#ccccff', image: 'https://via.placeholder.com/150?text=TRAPPIST-1h',
+        trail: []
+    }
+];
+
+
+        function resizeCanvas() {
+            canvas.width = window.innerWidth - sidebar.offsetWidth;
+            canvas.height = window.innerHeight;
+        }
+
+        function calculateScalingFactor() {
+            const maxDistance = Math.max(...planets.map(planet => planet.distance));
+            return Math.min(canvas.width, canvas.height) / (maxDistance * 2.5);
+        }
+
+        function drawSun() {
+            ctx.beginPath();
+            ctx.arc(canvas.width / 2, canvas.height / 2, 10, 0, Math.PI * 2); // Adjust Sun size
+            ctx.fillStyle = 'red';
+            ctx.fill();
+            ctx.closePath();
+        }
+
+        function drawOrbits(scalingFactor) {
+            planets.forEach(planet => {
+                ctx.beginPath();
+                ctx.arc(canvas.width / 2, canvas.height / 2, planet.distance * scalingFactor, 0, Math.PI * 2);
+                ctx.strokeStyle = '#555';
+                ctx.stroke();
+                ctx.closePath();
+            });
+        }
+
+        function drawPlanets() {
+            const scalingFactor = calculateScalingFactor();
+            ctx.clearRect(0, 0, canvas.width, canvas.height);
+            drawSun();
+            drawOrbits(scalingFactor);
+
+            planets.forEach(planet => {
+                const x = canvas.width / 2 + planet.distance * scalingFactor * Math.cos(planet.angle);
+                const y = canvas.height / 2 + planet.distance * scalingFactor * Math.sin(planet.angle);
+
+                // Draw planet trail
+                planet.trail.push({ x, y });
+                if (planet.trail.length > 50) planet.trail.shift();
+                ctx.beginPath();
+                ctx.moveTo(planet.trail[0].x, planet.trail[0].y);
+                for (let i = 1; i < planet.trail.length; i++) {
+                    ctx.lineTo(planet.trail[i].x, planet.trail[i].y);
+                }
+                ctx.strokeStyle = planet.color;
+                ctx.stroke();
+                ctx.closePath();
+
+                // Draw planet
+                ctx.beginPath();
+                ctx.arc(x, y, planet.radius * scalingFactor, 0, Math.PI * 2);
+                ctx.fillStyle = planet.color;
+                ctx.fill();
+                ctx.closePath();
+
+                // Draw planet name
+                ctx.fillStyle = '#fff';
+                ctx.font = '12px Arial';
+                ctx.fillText(planet.name, x - (ctx.measureText(planet.name).width / 2), y + (planet.radius * scalingFactor) + 15);
+            });
+        }
+
+        function update() {
+            planets.forEach(planet => {
+                planet.angle += planet.speed;
+                if (planet.angle >= 2 * Math.PI) planet.angle -= 2 * Math.PI;
+            });
+            drawPlanets();
+        }
+
+        function setupPlanetList() {
+            planetList.innerHTML = '';
+            planets.forEach((planet, index) => {
+                const li = document.createElement('li');
+                li.textContent = planet.name;
+                li.addEventListener('click', () => {
+                    planetImage.src = planet.image;
+                    planetDetails.innerHTML = `<strong>${planet.name}</strong><br>Diameter: ${planet.diameter}x Earth<br>Distance: ${planet.distance} AU`;
+                });
+                planetList.appendChild(li);
+            });
+        }
+
+        window.addEventListener('resize', resizeCanvas);
+        resizeCanvas();
+        setupPlanetList();
+
+        setInterval(update, 50); // Adjust the update interval as needed
+    </script>
+</body>
+</html>
